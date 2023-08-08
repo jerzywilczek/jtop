@@ -1,0 +1,11 @@
+[package]
+name = "tui-app"
+version = "0.1.0"
+authors = ["Jerzy Wilczek <jerzywilczek@gmail.com>"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+crossterm = "0.26.1"
+sysinfo = "0.29.7"
+tui = { package = "ratatui", version = "0.21.0" }
