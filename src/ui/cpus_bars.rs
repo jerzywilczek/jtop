@@ -14,7 +14,12 @@ pub struct CpusBars<'a> {
 
 impl<'a> CpusBars<'a> {
     pub fn new(app: &App) -> Self {
-        let cpus = app.history.iter().flat_map(|v| v.back()).copied().collect();
+        let cpus = app
+            .cpu_history
+            .iter()
+            .flat_map(|v| v.back())
+            .copied()
+            .collect();
 
         Self {
             cpus,

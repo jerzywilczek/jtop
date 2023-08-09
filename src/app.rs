@@ -1,6 +1,6 @@
-use std::{error, collections::VecDeque, time::Instant};
+use std::{collections::VecDeque, error, time::Instant};
 
-use sysinfo::{System, SystemExt, CpuExt};
+use sysinfo::{CpuExt, System, SystemExt};
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -13,7 +13,8 @@ pub struct App {
     /// Is the application running?
     pub running: bool,
 
-    pub history: Vec<VecDeque<f64>>,
+    pub cpu_history: Vec<VecDeque<f64>>,
+    pub mem_history: VecDeque<f64>,
 
     pub system: sysinfo::System,
 
@@ -25,15 +26,18 @@ impl App {
     pub fn new() -> Self {
         let mut system = sysinfo::System::new();
         system.refresh_cpu();
+        system.refresh_memory();
         let last_refresh = Instant::now();
 
         let len = system.cpus().len();
-        
-        let history = vec![vec![0.0; HISTORY_LEN].into(); len].into();
+
+        let cpu_history = vec![vec![0.0; HISTORY_LEN].into(); len].into();
+        let mem_history = vec![0.0; HISTORY_LEN].into();
 
         Self {
             running: true,
-            history,
+            cpu_history,
+            mem_history,
             last_refresh,
             system,
         }
@@ -45,11 +49,20 @@ impl App {
             self.system.refresh_cpu();
             self.last_refresh = Instant::now();
 
-            self.history.iter_mut().zip(self.system.cpus()).for_each(|(history, cpu)| {
-                history.pop_front();
-                history.push_back(cpu.cpu_usage() as f64)
-            });
+            self.cpu_history
+                .iter_mut()
+                .zip(self.system.cpus())
+                .for_each(|(history, cpu)| {
+                    history.pop_front();
+                    history.push_back(cpu.cpu_usage() as f64)
+                });
         }
+
+        self.system.refresh_memory();
+        self.mem_history.pop_front();
+        self.mem_history.push_back(
+            self.system.used_memory() as f64 / self.system.total_memory() as f64 * 100.0,
+        );
     }
 
     /// Set running to false to quit the application.

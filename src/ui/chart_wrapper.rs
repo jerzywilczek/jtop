@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use tui::{
     layout::{Alignment, Constraint},
     style::{Color, Style},
@@ -6,18 +8,18 @@ use tui::{
     widgets::{Axis, Block, Chart, Dataset, GraphType, Widget},
 };
 
-use crate::app::{App, HISTORY_LEN};
+use crate::app::HISTORY_LEN;
 
-pub struct CpusChart<'a> {
+pub struct ChartWrapper<'a, F: Fn(f64, usize) -> String> {
     data: Vec<Vec<(f64, f64)>>,
     style: Style,
     block: Option<Block<'a>>,
+    label_generator: F,
 }
 
-impl<'a> CpusChart<'a> {
-    pub fn new(app: &App) -> Self {
-        let data = app
-            .history
+impl<'a, F: Fn(f64, usize) -> String> ChartWrapper<'a, F> {
+    pub fn new(data: &[VecDeque<f64>], label_generator: F) -> Self {
+        let data = data
             .iter()
             .map(|cpu| {
                 (0..HISTORY_LEN)
@@ -31,6 +33,7 @@ impl<'a> CpusChart<'a> {
             data,
             style: Style::default(),
             block: None,
+            label_generator,
         }
     }
 
@@ -38,15 +41,15 @@ impl<'a> CpusChart<'a> {
         Self { style, ..self }
     }
 
-    pub fn block<'b>(self, block: Block<'b>) -> CpusChart<'b> {
-        CpusChart {
+    pub fn block<'b>(self, block: Block<'b>) -> ChartWrapper<'b, F> {
+        ChartWrapper {
             block: Some(block),
             ..self
         }
     }
 }
 
-impl<'a> Widget for CpusChart<'a> {
+impl<'a, F: Fn(f64, usize) -> String> Widget for ChartWrapper<'a, F> {
     fn render(self, area: tui::layout::Rect, buf: &mut tui::buffer::Buffer) {
         let colors = [
             Color::Blue,
@@ -69,7 +72,7 @@ impl<'a> Widget for CpusChart<'a> {
                     .data(data)
                     .graph_type(GraphType::Line)
                     .marker(Marker::Braille)
-                    .name(format!("cpu{i}: {:.1}%", data.last().unwrap().1))
+                    .name((self.label_generator)(data.last().unwrap().1, i))
                     .style(Style::default().fg(color))
             })
             .collect();
@@ -89,7 +92,7 @@ impl<'a> Widget for CpusChart<'a> {
                     ])
                     .labels_alignment(Alignment::Right),
             )
-            .hidden_legend_constraints((Constraint::Percentage(80), Constraint::Percentage(80)))
+            .hidden_legend_constraints((Constraint::Percentage(75), Constraint::Percentage(75)))
             .style(self.style);
 
         if let Some(block) = self.block {

@@ -14,7 +14,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
                 app.quit();
             }
         }
-        
+
         // Other handlers you could add here.
         _ => {}
     }

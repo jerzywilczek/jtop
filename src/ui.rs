@@ -1,16 +1,19 @@
+use std::rc::Rc;
+
 use tui::{
     backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders},
-    Frame, layout::{Layout, Direction, Constraint},
+    Frame,
 };
 
 use crate::app::App;
 
-use self::{cpus_chart::CpusChart, cpus_bars::CpusBars};
+use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars};
 
+mod chart_wrapper;
 mod cpus_bars;
-mod cpus_chart;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
@@ -22,15 +25,45 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     let layout = Layout::default()
         .margin(0)
         .direction(Direction::Vertical)
-        .constraints([Constraint::Ratio(3, 4), Constraint::Max(2 + app.history.len() as u16 / 4)])
+        .constraints([
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+            Constraint::Ratio(1, 3),
+        ])
         .split(frame.size());
 
+    let cpus = split_cpus(layout[0], app.cpu_history.len());
+
     frame.render_widget(
-        CpusChart::new(app)
-            .style(style)
-            .block(block.clone().title("cpu")),
-        layout[0],
+        ChartWrapper::new(&app.cpu_history, |percentage, i| {
+            format!("cpu{i}: {percentage:.1}%")
+        })
+        .style(style)
+        .block(block.clone().title("cpu")),
+        cpus[0],
     );
 
-    frame.render_widget(CpusBars::new(app).style(style).block(block.title("cpu")), layout[1])
+    frame.render_widget(
+        CpusBars::new(app)
+            .style(style)
+            .block(block.clone().title("cpu")),
+        cpus[1],
+    );
+
+    frame.render_widget(
+        ChartWrapper::new(&[app.mem_history.clone()], |percentage, _| {
+            format!("used mem: {percentage:.1}%")
+        })
+        .style(style)
+        .block(block.title("mem")),
+        layout[1],
+    );
+}
+
+fn split_cpus(area: Rect, _cpus: usize) -> Rc<[Rect]> {
+    Layout::default()
+        .margin(0)
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(area)
 }
