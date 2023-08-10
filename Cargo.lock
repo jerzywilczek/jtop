@@ -86,6 +86,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c785eefb63ebd0e33416dfcb8d6da0bf27ce752843a45632a67bf10d4d4b5c4"
 
 [[package]]
+name = "jtop"
+version = "0.1.0"
+dependencies = [
+ "crossterm 0.27.0",
+ "ratatui",
+ "sysinfo",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.147"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -241,15 +250,6 @@ dependencies = [
  "ntapi",
  "once_cell",
  "winapi",
-]
-
-[[package]]
-name = "tui-app"
-version = "0.1.0"
-dependencies = [
- "crossterm 0.27.0",
- "ratatui",
- "sysinfo",
 ]
 
 [[package]]
