@@ -10,10 +10,11 @@ use tui::{
 
 use crate::app::App;
 
-use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars};
+use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars, processes::Processes};
 
 mod chart_wrapper;
 mod cpus_bars;
+mod processes;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
@@ -55,9 +56,14 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             format!("used mem: {percentage:.1}%")
         })
         .style(style)
-        .block(block.title("mem")),
+        .block(block.clone().title("mem")),
         layout[1],
     );
+
+    frame.render_widget(
+        Processes::new(app).block(block.title("procs")).style(style),
+        layout[2],
+    )
 }
 
 fn split_cpus(area: Rect, _cpus: usize) -> Rc<[Rect]> {
