@@ -33,6 +33,16 @@ impl<B: Backend> Tui<B> {
         crossterm::execute!(io::stderr(), EnterAlternateScreen, EnableMouseCapture)?;
         self.terminal.hide_cursor()?;
         self.terminal.clear()?;
+
+        let original_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic| {
+            terminal::disable_raw_mode().unwrap();
+            crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+            original_hook(panic)
+        }));
+
+        
+
         Ok(())
     }
 
