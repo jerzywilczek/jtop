@@ -1,19 +1,14 @@
 use std::rc::Rc;
 
-use tui::{
-    backend::Backend,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
-    widgets::{Block, BorderType, Borders},
-    Frame,
-};
+use tui::{prelude::*, widgets::{Block, Borders, BorderType}};
 
 use crate::app::App;
 
-use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars, processes::Processes};
+use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars, disks::Disks, processes::Processes};
 
 mod chart_wrapper;
 mod cpus_bars;
+mod disks;
 mod processes;
 
 /// Renders the user interface widgets.
@@ -35,10 +30,18 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
     let cpus = split_cpus(layout[0], app.cpu_history.len());
 
+    let mem_and_disks = Layout::default()
+        .margin(0)
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Ratio(1, 2); 2])
+        .split(layout[1]);
+
     frame.render_widget(
-        ChartWrapper::new(&app.cpu_history, |percentage, i| {
-            format!("cpu{i}: {percentage:.1}%")
-        })
+        ChartWrapper::new(
+            &app.cpu_history,
+            Box::new(|percentage, i| format!("cpu{i}: {percentage:.1}%")),
+            [0.0, 100.0],
+        )
         .style(style)
         .block(block.clone().title("cpu")),
         cpus[0],
@@ -52,12 +55,21 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     );
 
     frame.render_widget(
-        ChartWrapper::new(&[app.mem_history.clone()], |percentage, _| {
-            format!("used mem: {percentage:.1}%")
-        })
+        ChartWrapper::new(
+            &[app.mem_history.clone()],
+            Box::new(|percentage, _| format!("used mem: {percentage:.1}%")),
+            [0.0, 100.0],
+        )
         .style(style)
         .block(block.clone().title("mem")),
-        layout[1],
+        mem_and_disks[0],
+    );
+
+    frame.render_widget(
+        Disks::new(app)
+            .block(block.clone().title("disks"))
+            .style(style),
+        mem_and_disks[1],
     );
 
     frame.render_widget(

@@ -10,15 +10,16 @@ use tui::{
 
 use crate::app::HISTORY_LEN;
 
-pub struct ChartWrapper<'a, F: Fn(f64, usize) -> String> {
+pub struct ChartWrapper<'a> {
     data: Vec<Vec<(f64, f64)>>,
     style: Style,
     block: Option<Block<'a>>,
-    label_generator: F,
+    label_generator: Box<dyn Fn(f64, usize) -> String>,
+    range: [f64; 2]
 }
 
-impl<'a, F: Fn(f64, usize) -> String> ChartWrapper<'a, F> {
-    pub fn new(data: &[VecDeque<f64>], label_generator: F) -> Self {
+impl<'a> ChartWrapper<'a> {
+    pub fn new(data: &[VecDeque<f64>], label_generator: Box<dyn Fn(f64, usize) -> String>, range: [f64; 2]) -> Self {
         let data = data
             .iter()
             .map(|cpu| {
@@ -34,6 +35,7 @@ impl<'a, F: Fn(f64, usize) -> String> ChartWrapper<'a, F> {
             style: Style::default(),
             block: None,
             label_generator,
+            range,
         }
     }
 
@@ -41,7 +43,7 @@ impl<'a, F: Fn(f64, usize) -> String> ChartWrapper<'a, F> {
         Self { style, ..self }
     }
 
-    pub fn block<'b>(self, block: Block<'b>) -> ChartWrapper<'b, F> {
+    pub fn block<'b>(self, block: Block<'b>) -> ChartWrapper<'b> {
         ChartWrapper {
             block: Some(block),
             ..self
@@ -49,7 +51,7 @@ impl<'a, F: Fn(f64, usize) -> String> ChartWrapper<'a, F> {
     }
 }
 
-impl<'a, F: Fn(f64, usize) -> String> Widget for ChartWrapper<'a, F> {
+impl<'a> Widget for ChartWrapper<'a> {
     fn render(self, area: tui::layout::Rect, buf: &mut tui::buffer::Buffer) {
         let colors = [
             Color::Blue,
@@ -81,14 +83,14 @@ impl<'a, F: Fn(f64, usize) -> String> Widget for ChartWrapper<'a, F> {
             .x_axis(Axis::default().bounds([0.0, HISTORY_LEN as f64]))
             .y_axis(
                 Axis::default()
-                    .bounds([0.0, 100.0])
+                    .bounds(self.range)
                     .labels(vec![
                         Span::raw(""),
-                        Span::raw("20"),
-                        Span::raw("40"),
-                        Span::raw("60"),
-                        Span::raw("80"),
-                        Span::raw("100"),
+                        Span::raw(format!("{:.01}", self.range[1] / 5.0)),
+                        Span::raw(format!("{:.01}", self.range[1] * 2.0 / 5.0)),
+                        Span::raw(format!("{:.01}", self.range[1] * 3.0 / 5.0)),
+                        Span::raw(format!("{:.01}", self.range[1] * 4.0 / 5.0)),
+                        Span::raw(format!("{:.01}", self.range[1])),
                     ])
                     .labels_alignment(Alignment::Right),
             )
