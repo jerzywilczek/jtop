@@ -12,7 +12,7 @@ use self::{chart_wrapper::ChartWrapper, cpus_bars::CpusBars, disks::Disks, proce
 mod chart_wrapper;
 mod cpus_bars;
 mod disks;
-mod processes;
+pub mod processes;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {

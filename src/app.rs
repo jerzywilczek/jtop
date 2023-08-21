@@ -26,6 +26,7 @@ impl ProcessInfo {
             cpu: proc.cpu_usage() as f64,
             mem: proc.memory(),
             name: proc.name().to_string(),
+            // FIXME: as per documentation, this is incorrect for FreeBSD and Windows
             disk_r: proc.disk_usage().read_bytes,
             disk_w: proc.disk_usage().written_bytes,
         }
@@ -75,6 +76,8 @@ impl Default for DiskRegexes {
 pub struct App {
     /// Is the application running?
     pub running: bool,
+    pub processes_sort_column: crate::ui::processes::Column,
+    pub processes_sort_direction: crate::ui::processes::SortDirection,
 
     pub cpu_history: Vec<VecDeque<f64>>,
     pub mem_history: VecDeque<f64>,
@@ -117,8 +120,12 @@ impl App {
         let mem_history = vec![0.0; HISTORY_LEN].into();
         let processes = system.processes().values().map(ProcessInfo::new).collect();
 
+        let processes_sort_column = crate::ui::processes::Column::Cpu;
+
         Self {
             running: true,
+            processes_sort_column,
+            processes_sort_direction: processes_sort_column.default_sort_direction(),
             cpu_history,
             mem_history,
             last_refresh,
