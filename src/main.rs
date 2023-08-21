@@ -1,7 +1,7 @@
-use jtop::app::{App, AppResult};
-use jtop::event::{Event, EventHandler};
-use jtop::handler::handle_key_events;
-use jtop::tui::Tui;
+use jwtop::app::{App, AppResult};
+use jwtop::event::{Event, EventHandler};
+use jwtop::handler::handle_key_events;
+use jwtop::tui::Tui;
 use std::io;
 use tui::backend::CrosstermBackend;
 use tui::Terminal;

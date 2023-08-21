@@ -107,7 +107,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c785eefb63ebd0e33416dfcb8d6da0bf27ce752843a45632a67bf10d4d4b5c4"
 
 [[package]]
-name = "jtop"
+name = "jwtop"
 version = "0.1.0"
 dependencies = [
  "crossterm 0.27.0",

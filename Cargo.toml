@@ -1,5 +1,5 @@
 [package]
-name = "jtop"
+name = "jwtop"
 version = "0.1.0"
 authors = ["Jerzy Wilczek <jerzykwilczek@gmail.com>"]
 license = "MIT"
