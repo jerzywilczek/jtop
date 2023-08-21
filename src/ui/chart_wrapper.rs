@@ -47,7 +47,7 @@ impl<'a> ChartWrapper<'a> {
         Self { style, ..self }
     }
 
-    pub fn block<'b>(self, block: Block<'b>) -> ChartWrapper<'b> {
+    pub fn block(self, block: Block) -> ChartWrapper {
         ChartWrapper {
             block: Some(block),
             ..self

@@ -92,6 +92,7 @@ pub struct App {
 }
 
 impl App {
+    #[allow(clippy::new_without_default)]
     /// Constructs a new instance of [`App`].
     pub fn new() -> Self {
         let mut system = sysinfo::System::new();
@@ -116,7 +117,7 @@ impl App {
             })
             .collect::<BTreeMap<_, _>>();
 
-        let cpu_history = vec![vec![0.0; HISTORY_LEN].into(); len].into();
+        let cpu_history = vec![vec![0.0; HISTORY_LEN].into(); len];
         let mem_history = vec![0.0; HISTORY_LEN].into();
         let processes = system.processes().values().map(ProcessInfo::new).collect();
 

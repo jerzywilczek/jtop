@@ -32,7 +32,7 @@ impl<'a> CpusBars<'a> {
         Self { style, ..self }
     }
 
-    pub fn block<'b>(self, block: Block<'b>) -> CpusBars<'b> {
+    pub fn block(self, block: Block) -> CpusBars {
         CpusBars {
             block: Some(block),
             ..self
@@ -77,7 +77,7 @@ impl<'a> Widget for CpusBars<'a> {
 
         cells
             .iter()
-            .flat_map(|c| c.into_iter())
+            .flat_map(|c| c.iter())
             .copied()
             .zip(self.cpus)
             .enumerate()

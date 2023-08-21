@@ -62,7 +62,7 @@ impl<'a> Disks<'a> {
         }
     }
 
-    pub fn block<'b>(self, block: Block<'b>) -> Disks<'b> {
+    pub fn block(self, block: Block) -> Disks {
         Disks {
             chart: self.chart.block(block),
         }

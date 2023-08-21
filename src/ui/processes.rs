@@ -105,10 +105,10 @@ impl Column {
         }
     }
 
-    fn to_string_with_arrow(&self, sorted_column: Column, sort_direction: SortDirection) -> String {
+    fn to_string_with_arrow(self, sorted_column: Column, sort_direction: SortDirection) -> String {
         format!(
             "{}{}",
-            self.to_string(),
+            self,
             self.sort_arrow_str(sorted_column, sort_direction)
         )
     }
@@ -152,7 +152,7 @@ impl<'b> Processes<'b> {
         Self { style, ..self }
     }
 
-    pub fn block<'c>(self, block: Block<'c>) -> Processes<'c> {
+    pub fn block(self, block: Block) -> Processes {
         Processes {
             block: Some(block),
             ..self
