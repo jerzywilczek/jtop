@@ -1,8 +1,7 @@
-use std::{cmp::Ordering, fmt::Display};
+use std::cmp::Ordering;
 
 use tui::{
-    layout::Constraint,
-    style::{Modifier, Style},
+    prelude::*,
     widgets::{Block, Row, Table, Widget},
 };
 
@@ -105,25 +104,42 @@ impl Column {
         }
     }
 
-    fn to_string_with_arrow(self, sorted_column: Column, sort_direction: SortDirection) -> String {
-        format!(
-            "{}{}",
-            self,
-            self.sort_arrow_str(sorted_column, sort_direction)
-        )
-    }
-}
-
-impl Display for Column {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Column::Pid => "pid",
-            Column::Name => "name",
-            Column::Cpu => "cpu",
-            Column::Memory => "mem",
-            Column::DiskRead => "disk r/s",
-            Column::DiskWrite => "disk w/s",
-        })
+    fn line_with_arrow(&self, sorted_column: Column, sort_direction: SortDirection) -> Line {
+        match self {
+            Column::Pid => vec![
+                Span::styled("p", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "id".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+            Column::Name => vec![
+                Span::styled("n", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "ame".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+            Column::Cpu => vec![
+                Span::styled("c", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "pu".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+            Column::Memory => vec![
+                Span::styled("m", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "em".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+            Column::DiskRead => vec![
+                "disk ".into(),
+                Span::styled("r", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "/s".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+            Column::DiskWrite => vec![
+                "disk ".into(),
+                Span::styled("w", Style::default().add_modifier(Modifier::UNDERLINED)),
+                "/s".into(),
+                self.sort_arrow_str(sorted_column, sort_direction).into(),
+            ],
+        }
+        .into()
     }
 }
 
@@ -183,7 +199,7 @@ impl<'b> Widget for Processes<'b> {
             Row::new(
                 Column::ALL_COLUMNS
                     .iter()
-                    .map(|c| c.to_string_with_arrow(self.sort_column, self.sort_direction)),
+                    .map(|c| c.line_with_arrow(self.sort_column, self.sort_direction)),
             )
             .style(
                 Style::default()
