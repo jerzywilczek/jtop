@@ -20,10 +20,10 @@ pub struct ProcessInfo {
 }
 
 impl ProcessInfo {
-    fn new(proc: &Process) -> Self {
+    fn new(proc: &Process, cpu_amount: usize) -> Self {
         Self {
             pid: proc.pid(),
-            cpu: proc.cpu_usage() as f64,
+            cpu: proc.cpu_usage() as f64 / cpu_amount as f64,
             mem: proc.memory(),
             name: proc.name().to_string(),
             // FIXME: as per documentation, this is incorrect for FreeBSD and Windows
@@ -119,7 +119,11 @@ impl App {
 
         let cpu_history = vec![vec![0.0; HISTORY_LEN].into(); len];
         let mem_history = vec![0.0; HISTORY_LEN].into();
-        let processes = system.processes().values().map(ProcessInfo::new).collect();
+        let processes = system
+            .processes()
+            .values()
+            .map(|p| ProcessInfo::new(p, len))
+            .collect();
 
         let processes_sort_column = crate::ui::processes::Column::Cpu;
 
@@ -164,7 +168,7 @@ impl App {
             .system
             .processes()
             .values()
-            .map(ProcessInfo::new)
+            .map(|p| ProcessInfo::new(p, self.system.cpus().len()))
             .collect();
 
         self.systemstat
