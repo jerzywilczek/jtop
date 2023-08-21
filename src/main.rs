@@ -1,10 +1,10 @@
-use std::io;
-use tui::backend::CrosstermBackend;
-use tui::Terminal;
 use jtop::app::{App, AppResult};
 use jtop::event::{Event, EventHandler};
 use jtop::handler::handle_key_events;
 use jtop::tui::Tui;
+use std::io;
+use tui::backend::CrosstermBackend;
+use tui::Terminal;
 
 const TICK_RATE: u64 = 1000;
 

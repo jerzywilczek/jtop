@@ -41,8 +41,6 @@ impl<B: Backend> Tui<B> {
             original_hook(panic)
         }));
 
-        
-
         Ok(())
     }
 

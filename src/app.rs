@@ -61,11 +61,12 @@ impl Default for DiskRegexes {
     fn default() -> Self {
         Self {
             disks: vec![
-                Regex::new(r"nvme[0-9]*n[0-9]*$").unwrap(),
-                Regex::new(r"sd[a-z]*$").unwrap(),
-                Regex::new(r"hd[a-z]*$").unwrap(),
-                Regex::new(r"[A-Z]:\\").unwrap(),
-            ]
+                // FIXME: this is absurd
+                Regex::new(r"nvme[0-9]+n[0-9]+$").unwrap(),
+                Regex::new(r"sd[a-z]+$").unwrap(),
+                Regex::new(r"hd[a-z]+$").unwrap(),
+                Regex::new(r"[A-Z]:\\").unwrap(), // FIXME: this does not work. we don't even get disk info on win
+            ],
         }
     }
 }
@@ -107,7 +108,7 @@ impl App {
             .filter(|(n, _)| disk_regexes.is_disk(n))
             .map(|(n, d)| {
                 let q: VecDeque<_> = vec![DiskInfo::default(); HISTORY_LEN].into();
-                
+
                 (n, (DiskInfo::new(&d), q))
             })
             .collect::<BTreeMap<_, _>>();
@@ -165,9 +166,15 @@ impl App {
             .filter(|(n, _)| self.disk_regexes.is_disk(n))
             .map(|(n, d)| (n, DiskInfo::new(&d)))
             .for_each(|(name, current)| {
-                let (prev, history) = self.disks.entry(name).or_insert((Default::default(), vec![Default::default(); HISTORY_LEN].into()));
+                let (prev, history) = self.disks.entry(name).or_insert((
+                    Default::default(),
+                    vec![Default::default(); HISTORY_LEN].into(),
+                ));
                 history.pop_front();
-                history.push_back(DiskInfo { r_sectors: current.r_sectors - prev.r_sectors, w_sectors: current.w_sectors - prev.w_sectors });
+                history.push_back(DiskInfo {
+                    r_sectors: current.r_sectors - prev.r_sectors,
+                    w_sectors: current.w_sectors - prev.w_sectors,
+                });
                 *prev = current;
             });
     }

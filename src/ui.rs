@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use tui::{prelude::*, widgets::{Block, Borders, BorderType}};
+use tui::{
+    prelude::*,
+    widgets::{Block, BorderType, Borders},
+};
 
 use crate::app::App;
 

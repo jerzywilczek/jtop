@@ -15,11 +15,15 @@ pub struct ChartWrapper<'a> {
     style: Style,
     block: Option<Block<'a>>,
     label_generator: Box<dyn Fn(f64, usize) -> String>,
-    range: [f64; 2]
+    range: [f64; 2],
 }
 
 impl<'a> ChartWrapper<'a> {
-    pub fn new(data: &[VecDeque<f64>], label_generator: Box<dyn Fn(f64, usize) -> String>, range: [f64; 2]) -> Self {
+    pub fn new(
+        data: &[VecDeque<f64>],
+        label_generator: Box<dyn Fn(f64, usize) -> String>,
+        range: [f64; 2],
+    ) -> Self {
         let data = data
             .iter()
             .map(|cpu| {
