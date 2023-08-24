@@ -1,11 +1,12 @@
 use std::cmp::Ordering;
 
+use fuzzy_matcher::FuzzyMatcher;
 use tui::{
     prelude::*,
-    widgets::{Block, Row, Table, Widget},
+    widgets::{block::Title, Block, Row, Table, Widget},
 };
 
-use crate::app::{App, ProcessInfo};
+use crate::app::{App, InputState, ProcessInfo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDirection {
@@ -22,10 +23,11 @@ impl SortDirection {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Column {
     Pid,
     Name,
+    #[default]
     Cpu,
     Memory,
     DiskRead,
@@ -92,51 +94,47 @@ impl Column {
         }
     }
 
-    fn sort_arrow_str(&self, sorted_column: Column, sort_direction: SortDirection) -> &str {
-        if self != &sorted_column {
-            return "";
+    fn sort_arrow_str(&self, sorting: &InputState) -> &str {
+        if let InputState::ProcessesSortSelection { column, direction } = sorting {
+            if self != column {
+                return "";
+            }
+
+            if *direction == SortDirection::Ascending {
+                return "▲";
+            } else {
+                return "▼";
+            }
         }
 
-        if sort_direction == SortDirection::Ascending {
-            "▲"
-        } else {
-            "▼"
-        }
+        ""
     }
 
-    fn line_with_arrow(&self, sorted_column: Column, sort_direction: SortDirection) -> Line {
+    fn line_with_arrow(&self, sorting: &InputState) -> Line {
+        let arrow = self.sort_arrow_str(sorting).into();
+        let highlight_style = match sorting {
+            InputState::ProcessesSortSelection { .. } => {
+                Style::default().add_modifier(Modifier::UNDERLINED)
+            }
+            InputState::ProcessesSearch { .. } => Style::default(),
+        };
+
         match self {
-            Column::Pid => vec![
-                Span::styled("p", Style::default().add_modifier(Modifier::UNDERLINED)),
-                "id".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
-            ],
-            Column::Name => vec![
-                Span::styled("n", Style::default().add_modifier(Modifier::UNDERLINED)),
-                "ame".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
-            ],
-            Column::Cpu => vec![
-                Span::styled("c", Style::default().add_modifier(Modifier::UNDERLINED)),
-                "pu".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
-            ],
-            Column::Memory => vec![
-                Span::styled("m", Style::default().add_modifier(Modifier::UNDERLINED)),
-                "em".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
-            ],
+            Column::Pid => vec![Span::styled("p", highlight_style), "id".into(), arrow],
+            Column::Name => vec![Span::styled("n", highlight_style), "ame".into(), arrow],
+            Column::Cpu => vec![Span::styled("c", highlight_style), "pu".into(), arrow],
+            Column::Memory => vec![Span::styled("m", highlight_style), "em".into(), arrow],
             Column::DiskRead => vec![
                 "disk ".into(),
-                Span::styled("r", Style::default().add_modifier(Modifier::UNDERLINED)),
+                Span::styled("r", highlight_style),
                 "/s".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
+                arrow,
             ],
             Column::DiskWrite => vec![
                 "disk ".into(),
-                Span::styled("w", Style::default().add_modifier(Modifier::UNDERLINED)),
+                Span::styled("w", highlight_style),
                 "/s".into(),
-                self.sort_arrow_str(sorted_column, sort_direction).into(),
+                arrow,
             ],
         }
         .into()
@@ -148,8 +146,7 @@ pub struct Processes<'b> {
     style: Style,
     block: Option<Block<'b>>,
 
-    sort_column: Column,
-    sort_direction: SortDirection,
+    sorting: InputState,
 }
 
 impl<'b> Processes<'b> {
@@ -159,8 +156,7 @@ impl<'b> Processes<'b> {
             style: Default::default(),
             block: Default::default(),
 
-            sort_column: app.processes_sort_column,
-            sort_direction: app.processes_sort_direction,
+            sorting: app.input_state.clone(),
         }
     }
 
@@ -178,10 +174,30 @@ impl<'b> Processes<'b> {
 
 impl<'b> Widget for Processes<'b> {
     fn render(mut self, area: tui::layout::Rect, buf: &mut tui::buffer::Buffer) {
-        self.processes.sort_by(|p1, p2| match self.sort_direction {
-            SortDirection::Ascending => self.sort_column.compare_by(p1, p2),
-            SortDirection::Descending => self.sort_column.compare_by(p1, p2).reverse(),
-        });
+        match &self.sorting {
+            InputState::ProcessesSortSelection { column, direction } => {
+                self.processes.sort_by(|p1, p2| match direction {
+                    SortDirection::Ascending => column.compare_by(p1, p2),
+                    SortDirection::Descending => column.compare_by(p1, p2).reverse(),
+                });
+            }
+            InputState::ProcessesSearch { search, .. } => {
+                let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
+
+                self.processes.sort_by_key(|p| {
+                    if let Some((score, _)) = matcher.fuzzy_indices(&p.name, search) {
+                        -score
+                    } else {
+                        i64::MAX
+                    }
+                })
+            }
+        }
+
+        let bottom_title = match &self.sorting {
+            InputState::ProcessesSortSelection { .. } => " press / to search ".to_string(),
+            InputState::ProcessesSearch { search, .. } => format!(" searched: {search}_ "),
+        };
 
         Table::new(self.processes.into_iter().map(|p| {
             Row::new(
@@ -193,13 +209,17 @@ impl<'b> Widget for Processes<'b> {
         }))
         .column_spacing(1)
         .widths(&[Constraint::Ratio(1, 6); 6])
-        .block(self.block.unwrap_or_default())
+        .block(
+            self.block
+                .unwrap_or_default()
+                .title(Title::from(bottom_title).position(tui::widgets::block::Position::Bottom)),
+        )
         .style(self.style)
         .header(
             Row::new(
                 Column::ALL_COLUMNS
                     .iter()
-                    .map(|c| c.line_with_arrow(self.sort_column, self.sort_direction)),
+                    .map(|c| c.line_with_arrow(&self.sorting)),
             )
             .style(
                 Style::default()

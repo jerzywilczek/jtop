@@ -4,6 +4,8 @@ use regex::Regex;
 use sysinfo::{CpuExt, Pid, Process, ProcessExt, System, SystemExt};
 use systemstat::{BlockDeviceStats, Platform};
 
+use crate::ui::processes::Column;
+
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -72,12 +74,32 @@ impl Default for DiskRegexes {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InputState {
+    ProcessesSortSelection {
+        column: crate::ui::processes::Column,
+        direction: crate::ui::processes::SortDirection,
+    },
+    ProcessesSearch {
+        old_column: Option<crate::ui::processes::Column>,
+        old_direction: Option<crate::ui::processes::SortDirection>,
+        search: String,
+    },
+}
+
+impl Default for InputState {
+    fn default() -> Self {
+        let column = Column::default();
+        let direction = column.default_sort_direction();
+        Self::ProcessesSortSelection { column, direction }
+    }
+}
+
 /// Application.
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    pub processes_sort_column: crate::ui::processes::Column,
-    pub processes_sort_direction: crate::ui::processes::SortDirection,
+    pub input_state: InputState,
 
     pub cpu_history: Vec<VecDeque<f64>>,
     pub mem_history: VecDeque<f64>,
@@ -125,12 +147,9 @@ impl App {
             .map(|p| ProcessInfo::new(p, len))
             .collect();
 
-        let processes_sort_column = crate::ui::processes::Column::Cpu;
-
         Self {
             running: true,
-            processes_sort_column,
-            processes_sort_direction: processes_sort_column.default_sort_direction(),
+            input_state: Default::default(),
             cpu_history,
             mem_history,
             last_refresh,
