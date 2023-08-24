@@ -4,6 +4,12 @@ version = "0.1.0"
 authors = ["Jerzy Wilczek <jerzykwilczek@gmail.com>"]
 license = "MIT"
 edition = "2021"
+description = "a simple TUI resource monitor inspired by gtop and bottom"
+readme = "README.md"
+homepage = "https://github.com/jerzywilczek/jwtop"
+repository = "https://github.com/jerzywilczek/jwtop"
+keywords = ["monitoring", "cli", "top", "tui"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 crossterm = "0.27.0"
