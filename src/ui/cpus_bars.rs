@@ -55,13 +55,13 @@ impl<'a> Widget for CpusBars<'a> {
             None => area,
         };
 
+        let mut constraints = vec![Constraint::Max(3); vertical_amount as usize];
+        constraints.push(Constraint::Min(0));
+
         let rows = Layout::default()
             .margin(0)
             .direction(Direction::Vertical)
-            .constraints(vec![
-                Constraint::Ratio(1, vertical_amount);
-                vertical_amount as usize
-            ])
+            .constraints(constraints)
             .split(area);
 
         let cells = rows
@@ -98,8 +98,8 @@ impl<'a> Widget for CpusBars<'a> {
                         tui::widgets::Padding {
                             left: 1,
                             right: if i % 4 == 3 { 1 } else { 0 },
-                            top: 0,
-                            bottom: 0,
+                            top: 1,
+                            bottom: 1,
                         },
                     ))
                     .render(area, buf);
