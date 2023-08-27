@@ -64,11 +64,9 @@ impl Default for DiskRegexes {
     fn default() -> Self {
         Self {
             disks: vec![
-                // FIXME: this is absurd
                 Regex::new(r"nvme[0-9]+n[0-9]+$").unwrap(),
                 Regex::new(r"sd[a-z]+$").unwrap(),
                 Regex::new(r"hd[a-z]+$").unwrap(),
-                Regex::new(r"[A-Z]:\\").unwrap(), // FIXME: this does not work. we don't even get disk info on win
             ],
         }
     }

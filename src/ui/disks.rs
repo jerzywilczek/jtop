@@ -5,18 +5,28 @@ use tui::{
 
 use crate::app::App;
 
+#[cfg(target_os = "windows")]
+use tui::widgets::Paragraph;
+
+#[cfg(not(target_os = "windows"))]
 use super::chart_wrapper::ChartWrapper;
 
+#[cfg(not(target_os = "windows"))]
 fn to_mb(sectors: usize) -> f64 {
     // FIXME: some disks have sector size != 512
     sectors as f64 * 512.0 / 1_000_000.0
 }
 
 pub struct Disks<'a> {
+    #[cfg(not(target_os = "windows"))]
     chart: ChartWrapper<'a>,
+
+    #[cfg(target_os = "windows")]
+    paragraph: Paragraph<'a>,
 }
 
 impl<'a> Disks<'a> {
+    #[cfg(not(target_os = "windows"))]
     pub fn new(app: &App) -> Self {
         let data = app
             .disks
@@ -56,21 +66,43 @@ impl<'a> Disks<'a> {
         Self { chart }
     }
 
-    pub fn style(self, style: Style) -> Self {
+    #[cfg(target_os = "windows")]
+    pub fn new(_app: &App) -> Self {
         Self {
-            chart: self.chart.style(style),
+            paragraph: Paragraph::new("disks view not supported on windows ;(")
+                .alignment(Alignment::Center),
         }
     }
 
-    pub fn block(self, block: Block) -> Disks {
+    pub fn style(self, style: Style) -> Self {
+        Self {
+            #[cfg(not(target_os = "windows"))]
+            chart: self.chart.style(style),
+
+            #[cfg(target_os = "windows")]
+            paragraph: self.paragraph.style(style),
+        }
+    }
+
+    pub fn block(self, block: Block<'a>) -> Disks {
         Disks {
+            #[cfg(not(target_os = "windows"))]
             chart: self.chart.block(block),
+
+            #[cfg(target_os = "windows")]
+            paragraph: self.paragraph.block(block),
         }
     }
 }
 
 impl<'a> Widget for Disks<'a> {
+    #[cfg(not(target_os = "windows"))]
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.chart.render(area, buf);
+    }
+
+    #[cfg(target_os = "windows")]
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        self.paragraph.render(area, buf);
     }
 }
