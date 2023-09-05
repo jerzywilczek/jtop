@@ -6,7 +6,7 @@ use tui::{
     widgets::{block::Title, Block, Row, Table, Widget},
 };
 
-use crate::app::{App, InputState, ProcessInfo};
+use crate::app::{App, InputState, MemPrefix, ProcessInfo};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDirection {
@@ -47,29 +47,13 @@ impl Column {
     // TODO: add comparators here and sort
 
     fn extract_data_as_string(&self, info: &ProcessInfo) -> String {
-        fn mem_string(mem: u64) -> String {
-            const PREFIXES: &[&str] = &["B", "K", "M", "G", "T", "P"];
-
-            let mut mem = mem as f64;
-
-            for &prefix in PREFIXES {
-                if mem <= 1_000.0 {
-                    return format!("{mem:.1}{prefix}");
-                }
-
-                mem /= 1_000.0;
-            }
-
-            format!("{mem:.1}{}", PREFIXES.last().unwrap())
-        }
-
         match self {
             Column::Pid => info.pid.to_string(),
             Column::Name => info.name.clone(),
             Column::Cpu => format!("{:.01}%", info.cpu),
-            Column::Memory => mem_string(info.mem),
-            Column::DiskRead => mem_string(info.disk_r),
-            Column::DiskWrite => mem_string(info.disk_w),
+            Column::Memory => MemPrefix::best_string(info.mem as f64),
+            Column::DiskRead => MemPrefix::best_string(info.disk_r as f64),
+            Column::DiskWrite => MemPrefix::best_string(info.disk_w as f64),
         }
     }
 

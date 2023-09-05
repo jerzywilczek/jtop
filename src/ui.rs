@@ -46,7 +46,8 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             [0.0, 100.0],
         )
         .style(style)
-        .block(block.clone().title("cpu")),
+        .block(block.clone().title("cpu"))
+        .label_suffix('%'),
         cpus[0],
     );
 
@@ -60,11 +61,12 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     frame.render_widget(
         ChartWrapper::new(
             &[app.mem_history.clone()],
-            Box::new(|percentage, _| format!("used mem: {percentage:.1}%")),
-            [0.0, 100.0],
+            Box::new(|used_mem, _| format!("used mem: {used_mem:.1}{}", app.mem_prefix.prefix())),
+            [0.0, app.mem_total],
         )
         .style(style)
-        .block(block.clone().title("mem")),
+        .block(block.clone().title("mem"))
+        .label_suffix(app.mem_prefix.prefix()),
         mem_and_disks[0],
     );
 

@@ -17,15 +17,15 @@ fn to_mb(sectors: usize) -> f64 {
     sectors as f64 * 512.0 / 1_000_000.0
 }
 
-pub struct Disks<'a> {
+pub struct Disks<'a, 'b> {
     #[cfg(not(target_os = "windows"))]
-    chart: ChartWrapper<'a>,
+    chart: ChartWrapper<'a, 'b>,
 
     #[cfg(target_os = "windows")]
     paragraph: Paragraph<'a>,
 }
 
-impl<'a> Disks<'a> {
+impl<'a, 'b> Disks<'a, 'b> {
     #[cfg(not(target_os = "windows"))]
     pub fn new(app: &App) -> Self {
         let data = app
@@ -55,13 +55,14 @@ impl<'a> Disks<'a> {
             &data,
             Box::new(move |v, i| {
                 format!(
-                    "{} {}: {v:.02}MB/s",
+                    "{} {}: {v:.02}M/s",
                     names[i / 2],
                     if i % 2 == 0 { "r" } else { "w" }
                 )
             }),
             [0.0, max],
-        );
+        )
+        .label_suffix('M');
 
         Self { chart }
     }
@@ -95,7 +96,7 @@ impl<'a> Disks<'a> {
     }
 }
 
-impl<'a> Widget for Disks<'a> {
+impl<'a, 'b> Widget for Disks<'a, 'b> {
     #[cfg(not(target_os = "windows"))]
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.chart.render(area, buf);

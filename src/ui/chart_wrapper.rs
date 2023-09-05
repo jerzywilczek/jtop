@@ -10,18 +10,19 @@ use tui::{
 
 use crate::app::HISTORY_LEN;
 
-pub struct ChartWrapper<'a> {
+pub struct ChartWrapper<'a, 'b> {
     data: Vec<Vec<(f64, f64)>>,
     style: Style,
-    block: Option<Block<'a>>,
-    label_generator: Box<dyn Fn(f64, usize) -> String>,
+    block: Option<Block<'b>>,
+    label_generator: Box<dyn Fn(f64, usize) -> String + 'a>,
     range: [f64; 2],
+    label_suffix: Option<char>,
 }
 
-impl<'a> ChartWrapper<'a> {
+impl<'a, 'b> ChartWrapper<'a, 'b> {
     pub fn new(
         data: &[VecDeque<f64>],
-        label_generator: Box<dyn Fn(f64, usize) -> String>,
+        label_generator: Box<dyn Fn(f64, usize) -> String + 'a>,
         range: [f64; 2],
     ) -> Self {
         let data = data
@@ -40,6 +41,7 @@ impl<'a> ChartWrapper<'a> {
             block: None,
             label_generator,
             range,
+            label_suffix: None,
         }
     }
 
@@ -47,15 +49,22 @@ impl<'a> ChartWrapper<'a> {
         Self { style, ..self }
     }
 
-    pub fn block(self, block: Block) -> ChartWrapper {
+    pub fn block<'c>(self, block: Block<'c>) -> ChartWrapper<'a, 'c> {
         ChartWrapper {
             block: Some(block),
             ..self
         }
     }
+
+    pub fn label_suffix(self, label_suffix: char) -> Self {
+        Self {
+            label_suffix: Some(label_suffix),
+            ..self
+        }
+    }
 }
 
-impl<'a> Widget for ChartWrapper<'a> {
+impl<'a, 'b> Widget for ChartWrapper<'a, 'b> {
     fn render(self, area: tui::layout::Rect, buf: &mut tui::buffer::Buffer) {
         let colors = [
             Color::Blue,
@@ -83,6 +92,11 @@ impl<'a> Widget for ChartWrapper<'a> {
             })
             .collect();
 
+        let label_suffix = self
+            .label_suffix
+            .map(String::from)
+            .unwrap_or_else(String::new);
+
         let mut chart = Chart::new(datasets)
             .x_axis(Axis::default().bounds([0.0, HISTORY_LEN as f64]))
             .y_axis(
@@ -90,11 +104,11 @@ impl<'a> Widget for ChartWrapper<'a> {
                     .bounds(self.range)
                     .labels(vec![
                         Span::raw(""),
-                        Span::raw(format!("{:.01}", self.range[1] / 5.0)),
-                        Span::raw(format!("{:.01}", self.range[1] * 2.0 / 5.0)),
-                        Span::raw(format!("{:.01}", self.range[1] * 3.0 / 5.0)),
-                        Span::raw(format!("{:.01}", self.range[1] * 4.0 / 5.0)),
-                        Span::raw(format!("{:.01}", self.range[1])),
+                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] / 5.0)),
+                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 2.0 / 5.0)),
+                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 3.0 / 5.0)),
+                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 4.0 / 5.0)),
+                        Span::raw(format!("{:.0}{label_suffix}", self.range[1])),
                     ])
                     .labels_alignment(Alignment::Right),
             )

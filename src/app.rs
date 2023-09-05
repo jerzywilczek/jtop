@@ -64,9 +64,10 @@ impl Default for DiskRegexes {
     fn default() -> Self {
         Self {
             disks: vec![
-                Regex::new(r"nvme[0-9]+n[0-9]+$").unwrap(),
-                Regex::new(r"sd[a-z]+$").unwrap(),
-                Regex::new(r"hd[a-z]+$").unwrap(),
+                Regex::new(r"^nvme[0-9]+n[0-9]+$").unwrap(),
+                Regex::new(r"^sd[a-z]+$").unwrap(),
+                Regex::new(r"^hd[a-z]+$").unwrap(),
+                Regex::new(r"^disk[0-9]+$").unwrap(),
             ],
         }
     }
@@ -93,6 +94,75 @@ impl Default for InputState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MemPrefix {
+    Byte = 0,
+    Kilo,
+    Mega,
+    Giga,
+    Tera,
+    Peta,
+}
+
+impl MemPrefix {
+    pub const MULTIPLIER: u64 = 1024;
+    pub const PREFIXES: &[Self] = &[
+        MemPrefix::Byte,
+        MemPrefix::Kilo,
+        MemPrefix::Mega,
+        MemPrefix::Giga,
+        MemPrefix::Tera,
+        MemPrefix::Peta,
+    ];
+
+    pub fn next(self) -> Self {
+        match self {
+            MemPrefix::Byte => MemPrefix::Kilo,
+            MemPrefix::Kilo => MemPrefix::Mega,
+            MemPrefix::Mega => MemPrefix::Giga,
+            MemPrefix::Giga => MemPrefix::Tera,
+            MemPrefix::Tera => MemPrefix::Peta,
+            MemPrefix::Peta => MemPrefix::Peta,
+        }
+    }
+
+    pub fn prefix(self) -> char {
+        match self {
+            MemPrefix::Byte => 'B',
+            MemPrefix::Kilo => 'K',
+            MemPrefix::Mega => 'M',
+            MemPrefix::Giga => 'G',
+            MemPrefix::Tera => 'T',
+            MemPrefix::Peta => 'P',
+        }
+    }
+
+    pub fn find_best(mut bytes: f64) -> (f64, Self) {
+        for &prefix in Self::PREFIXES {
+            if bytes < Self::MULTIPLIER as f64 {
+                return (bytes, prefix);
+            }
+
+            bytes /= Self::MULTIPLIER as f64;
+        }
+
+        (
+            bytes * Self::MULTIPLIER as f64,
+            *Self::PREFIXES.last().unwrap(),
+        )
+    }
+
+    pub fn best_string(bytes: f64) -> String {
+        let (mem, prefix) = Self::find_best(bytes);
+
+        format!("{mem:.1}{}", prefix.prefix())
+    }
+
+    pub fn convert(self, bytes: f64) -> f64 {
+        bytes / (Self::MULTIPLIER as f64).powi(self as i32)
+    }
+}
+
 /// Application.
 pub struct App {
     /// Is the application running?
@@ -101,6 +171,9 @@ pub struct App {
 
     pub cpu_history: Vec<VecDeque<f64>>,
     pub mem_history: VecDeque<f64>,
+    pub mem_total: f64,
+    pub mem_prefix: MemPrefix,
+
     pub processes: Vec<ProcessInfo>,
     pub disks: BTreeMap<String, (DiskInfo, VecDeque<DiskInfo>)>,
 
@@ -138,7 +211,10 @@ impl App {
             .collect::<BTreeMap<_, _>>();
 
         let cpu_history = vec![vec![0.0; HISTORY_LEN].into(); len];
+
         let mem_history = vec![0.0; HISTORY_LEN].into();
+        let (mem_total, mem_prefix) = MemPrefix::find_best(system.total_memory() as f64);
+
         let processes = system
             .processes()
             .values()
@@ -150,6 +226,8 @@ impl App {
             input_state: Default::default(),
             cpu_history,
             mem_history,
+            mem_total,
+            mem_prefix,
             last_refresh,
             system,
             systemstat,
@@ -176,9 +254,8 @@ impl App {
 
         self.system.refresh_memory();
         self.mem_history.pop_front();
-        self.mem_history.push_back(
-            self.system.used_memory() as f64 / self.system.total_memory() as f64 * 100.0,
-        );
+        self.mem_history
+            .push_back(self.mem_prefix.convert(self.system.used_memory() as f64));
 
         self.system.refresh_processes();
         self.processes = self
