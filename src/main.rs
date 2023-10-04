@@ -1,3 +1,4 @@
+use clap::Parser;
 use jwtop::app::{App, AppResult};
 use jwtop::event::{Event, EventHandler};
 use jwtop::handler::handle_key_events;
@@ -9,6 +10,20 @@ use tui::Terminal;
 const TICK_RATE: u64 = 1000;
 
 fn main() -> AppResult<()> {
+    let cli = jwtop::config::Cli::parse();
+
+    if cli.dump_config {
+        println!("{}", jwtop::config::sample_config());
+        return Ok(());
+    }
+
+    if cli.dump_sample_theme {
+        println!("{}", jwtop::config::sample_theme());
+        return Ok(());
+    }
+
+    // TODO: load the config and actually use it in the app.
+
     // Create an application.
     let mut app = App::new();
 
