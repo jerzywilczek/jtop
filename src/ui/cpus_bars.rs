@@ -1,15 +1,16 @@
 use tui::{
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style},
+    style::Style,
     widgets::{Block, Borders, Gauge, Widget},
 };
 
-use crate::app::App;
+use crate::{app::App, config::BarsTheme};
 
 pub struct CpusBars<'a> {
     cpus: Vec<f64>,
     style: Style,
     block: Option<Block<'a>>,
+    theme: BarsTheme,
 }
 
 impl<'a> CpusBars<'a> {
@@ -25,6 +26,7 @@ impl<'a> CpusBars<'a> {
             cpus,
             style: Default::default(),
             block: Default::default(),
+            theme: app.config.theme.bars,
         }
     }
 
@@ -83,11 +85,11 @@ impl<'a> Widget for CpusBars<'a> {
             .enumerate()
             .for_each(|(i, (area, val))| {
                 let color = if val < 50.0 {
-                    Color::Green
+                    *self.theme.low_usage_color
                 } else if val < 80.0 {
-                    Color::Yellow
+                    *self.theme.medium_usage_color
                 } else {
-                    Color::Red
+                    *self.theme.high_usage_color
                 };
 
                 Gauge::default()

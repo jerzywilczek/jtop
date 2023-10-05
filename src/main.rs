@@ -1,3 +1,4 @@
+use clap::Parser;
 use jwtop::app::{App, AppResult};
 use jwtop::event::{Event, EventHandler};
 use jwtop::handler::handle_key_events;
@@ -9,8 +10,26 @@ use tui::Terminal;
 const TICK_RATE: u64 = 1000;
 
 fn main() -> AppResult<()> {
+    let cli = jwtop::config::Cli::parse();
+
+    if cli.dump_config {
+        println!("{}", jwtop::config::sample_config());
+        return Ok(());
+    }
+
+    if cli.dump_sample_theme {
+        println!(
+            "{}",
+            toml::to_string_pretty(&jwtop::config::Theme::sample_theme()).unwrap()
+        );
+
+        return Ok(());
+    }
+
+    let config = jwtop::config::Config::load(&cli)?;
+
     // Create an application.
-    let mut app = App::new();
+    let mut app = App::new(config);
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());

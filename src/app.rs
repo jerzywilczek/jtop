@@ -4,7 +4,7 @@ use regex::Regex;
 use sysinfo::{CpuExt, Pid, Process, ProcessExt, System, SystemExt};
 use systemstat::{BlockDeviceStats, Platform};
 
-use crate::ui::processes::Column;
+use crate::{config::Config, ui::processes::Column};
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -168,6 +168,7 @@ pub struct App {
     /// Is the application running?
     pub running: bool,
     pub input_state: InputState,
+    pub config: Config,
 
     pub cpu_history: Vec<VecDeque<f64>>,
     pub mem_history: VecDeque<f64>,
@@ -185,9 +186,8 @@ pub struct App {
 }
 
 impl App {
-    #[allow(clippy::new_without_default)]
     /// Constructs a new instance of [`App`].
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         let mut system = sysinfo::System::new();
         let systemstat = systemstat::System::new();
         system.refresh_cpu();
@@ -224,6 +224,7 @@ impl App {
         Self {
             running: true,
             input_state: Default::default(),
+            config,
             cpu_history,
             mem_history,
             mem_total,
