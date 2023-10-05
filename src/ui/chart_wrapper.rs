@@ -92,10 +92,7 @@ impl<'a, 'b> Widget for ChartWrapper<'a, 'b> {
             })
             .collect();
 
-        let label_suffix = self
-            .label_suffix
-            .map(String::from)
-            .unwrap_or_else(String::new);
+        let label_suffix = self.label_suffix.map(String::from).unwrap_or_default();
 
         let mut chart = Chart::new(datasets)
             .x_axis(Axis::default().bounds([0.0, HISTORY_LEN as f64]))
