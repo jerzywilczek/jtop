@@ -61,6 +61,7 @@ impl<'a, 'b> Disks<'a, 'b> {
                 )
             }),
             [0.0, max],
+            &app.config,
         )
         .label_suffix('M');
 

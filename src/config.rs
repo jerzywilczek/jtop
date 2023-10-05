@@ -1,12 +1,12 @@
 mod color;
 mod theme;
 
-use std::{ffi::OsString, path::PathBuf};
+use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
-pub use color::RgbColor;
+pub use color::SerdeColor;
 pub use theme::*;
 
 #[derive(clap::Parser)]
@@ -32,7 +32,7 @@ pub struct Config {
 
 impl Config {
     pub fn load(cli: &Cli) -> Result<Self> {
-        let Some(config_dir_path) = config_path(cli) else {
+        let Some(config_dir_path) = config_path(cli)? else {
             return Ok(Default::default());
         };
 
@@ -61,7 +61,11 @@ impl Config {
             });
         };
 
-        let theme = Theme::load_from_file(&config_dir_path.join("themes").join(theme))?;
+        let theme = if theme == "default" {
+            Theme::default()
+        } else {
+            Theme::load_from_file(&config_dir_path.join("themes").join(format!("{theme}.toml")))?
+        };
 
         Ok(Self { theme })
     }
@@ -69,26 +73,35 @@ impl Config {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 struct RawConfig {
-    theme: Option<OsString>,
+    theme: Option<String>,
 }
 
 pub fn sample_config() -> String {
     toml::to_string_pretty(&RawConfig {
-        theme: Some("theme name (has to correspond with a valid theme file located in <config path>/themes/<theme name>.toml)".into())
-    }).unwrap()
+        theme: Some("default".into()),
+    })
+    .unwrap()
 }
 
-pub fn config_path(cli: &Cli) -> Option<PathBuf> {
+pub fn config_path(cli: &Cli) -> Result<Option<PathBuf>> {
     if let Some(ref path) = cli.config_path {
         if path.exists() {
-            return Some(path.clone());
+            return Ok(Some(path.clone()));
+        } else {
+            return Err(anyhow!(
+                "The config path passed in the cli option does not exist"
+            ));
         }
     }
 
     if let Ok(path) = std::env::var("JWTOP_CONFIG_DIR") {
         let path: PathBuf = path.into();
         if path.exists() {
-            return path.into();
+            return Ok(path.into());
+        } else {
+            return Err(anyhow!(
+                "The config path passed in the environment variable does not exist"
+            ));
         }
     }
 
@@ -98,8 +111,8 @@ pub fn config_path(cli: &Cli) -> Option<PathBuf> {
         .to_path_buf();
 
     if path.exists() {
-        return Some(path);
+        return Ok(Some(path));
     }
 
-    None
+    Ok(None)
 }

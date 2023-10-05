@@ -2,13 +2,16 @@ use std::collections::VecDeque;
 
 use tui::{
     layout::{Alignment, Constraint},
-    style::{Color, Style},
+    style::Style,
     symbols::Marker,
     text::Span,
     widgets::{Axis, Block, Chart, Dataset, GraphType, Widget},
 };
 
-use crate::app::HISTORY_LEN;
+use crate::{
+    app::HISTORY_LEN,
+    config::{Config, PlotTheme},
+};
 
 pub struct ChartWrapper<'a, 'b> {
     data: Vec<Vec<(f64, f64)>>,
@@ -17,6 +20,7 @@ pub struct ChartWrapper<'a, 'b> {
     label_generator: Box<dyn Fn(f64, usize) -> String + 'a>,
     range: [f64; 2],
     label_suffix: Option<char>,
+    theme: PlotTheme,
 }
 
 impl<'a, 'b> ChartWrapper<'a, 'b> {
@@ -24,6 +28,7 @@ impl<'a, 'b> ChartWrapper<'a, 'b> {
         data: &[VecDeque<f64>],
         label_generator: Box<dyn Fn(f64, usize) -> String + 'a>,
         range: [f64; 2],
+        config: &Config,
     ) -> Self {
         let data = data
             .iter()
@@ -42,6 +47,7 @@ impl<'a, 'b> ChartWrapper<'a, 'b> {
             label_generator,
             range,
             label_suffix: None,
+            theme: config.theme.plot.clone(),
         }
     }
 
@@ -66,16 +72,7 @@ impl<'a, 'b> ChartWrapper<'a, 'b> {
 
 impl<'a, 'b> Widget for ChartWrapper<'a, 'b> {
     fn render(self, area: tui::layout::Rect, buf: &mut tui::buffer::Buffer) {
-        let colors = [
-            Color::Blue,
-            Color::Cyan,
-            Color::Green,
-            Color::Magenta,
-            Color::Red,
-            Color::Yellow,
-        ]
-        .iter()
-        .cycle();
+        let colors = self.theme.plot_colors.iter().cycle();
 
         let datasets = self
             .data
@@ -88,11 +85,13 @@ impl<'a, 'b> Widget for ChartWrapper<'a, 'b> {
                     .graph_type(GraphType::Line)
                     .marker(Marker::Braille)
                     .name((self.label_generator)(data.last().unwrap().1, i))
-                    .style(Style::default().fg(color))
+                    .style(Style::default().fg(*color))
             })
             .collect();
 
         let label_suffix = self.label_suffix.map(String::from).unwrap_or_default();
+
+        let axis_label_style = Style::default().fg(*self.theme.axis_labels_color);
 
         let mut chart = Chart::new(datasets)
             .x_axis(Axis::default().bounds([0.0, HISTORY_LEN as f64]))
@@ -100,12 +99,27 @@ impl<'a, 'b> Widget for ChartWrapper<'a, 'b> {
                 Axis::default()
                     .bounds(self.range)
                     .labels(vec![
-                        Span::raw(""),
-                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] / 5.0)),
-                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 2.0 / 5.0)),
-                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 3.0 / 5.0)),
-                        Span::raw(format!("{:.0}{label_suffix}", self.range[1] * 4.0 / 5.0)),
-                        Span::raw(format!("{:.0}{label_suffix}", self.range[1])),
+                        Span::styled("", axis_label_style),
+                        Span::styled(
+                            format!("{:.0}{label_suffix}", self.range[1] / 5.0),
+                            axis_label_style,
+                        ),
+                        Span::styled(
+                            format!("{:.0}{label_suffix}", self.range[1] * 2.0 / 5.0),
+                            axis_label_style,
+                        ),
+                        Span::styled(
+                            format!("{:.0}{label_suffix}", self.range[1] * 3.0 / 5.0),
+                            axis_label_style,
+                        ),
+                        Span::styled(
+                            format!("{:.0}{label_suffix}", self.range[1] * 4.0 / 5.0),
+                            axis_label_style,
+                        ),
+                        Span::styled(
+                            format!("{:.0}{label_suffix}", self.range[1]),
+                            axis_label_style,
+                        ),
                     ])
                     .labels_alignment(Alignment::Right),
             )

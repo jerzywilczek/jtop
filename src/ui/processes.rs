@@ -6,7 +6,10 @@ use tui::{
     widgets::{block::Title, Block, Row, Table, Widget},
 };
 
-use crate::app::{App, InputState, MemPrefix, ProcessInfo};
+use crate::{
+    app::{App, InputState, MemPrefix, ProcessInfo},
+    config::TableTheme,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SortDirection {
@@ -129,6 +132,7 @@ pub struct Processes<'b> {
     processes: Vec<ProcessInfo>,
     style: Style,
     block: Option<Block<'b>>,
+    theme: TableTheme,
 
     sorting: InputState,
 }
@@ -139,6 +143,7 @@ impl<'b> Processes<'b> {
             processes: app.processes.clone(),
             style: Default::default(),
             block: Default::default(),
+            theme: app.config.theme.table,
 
             sorting: app.input_state.clone(),
         }
@@ -189,7 +194,7 @@ impl<'b> Widget for Processes<'b> {
                     .iter()
                     .map(|c| c.extract_data_as_string(&p)),
             )
-            .style(Style::default().fg(tui::style::Color::Blue))
+            .style(Style::default().fg(*self.theme.row_color))
         }))
         .column_spacing(1)
         .widths(&[Constraint::Ratio(1, 6); 6])
@@ -207,7 +212,7 @@ impl<'b> Widget for Processes<'b> {
             )
             .style(
                 Style::default()
-                    .fg(tui::style::Color::Blue)
+                    .fg(*self.theme.header_color)
                     .add_modifier(Modifier::BOLD),
             ),
         )

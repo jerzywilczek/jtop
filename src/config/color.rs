@@ -1,19 +1,35 @@
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct RgbColor(pub u8, pub u8, pub u8);
+use tui::style::Color;
 
-impl serde::Serialize for RgbColor {
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SerdeColor(pub Color);
+
+impl std::ops::Deref for SerdeColor {
+    type Target = Color;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl serde::Serialize for SerdeColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&format!("#{:02x}{:02x}{:02x}", self.0, self.1, self.2))
+        let Color::Rgb(r, g, b) = self.0 else {
+            return Err(serde::ser::Error::custom(
+                "only rgb colors are serializable",
+            ));
+        };
+
+        serializer.serialize_str(&format!("#{:02x}{:02x}{:02x}", r, g, b))
     }
 }
 
 struct RgbColorVisitor;
 
 impl<'de> serde::de::Visitor<'de> for RgbColorVisitor {
-    type Value = RgbColor;
+    type Value = SerdeColor;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("a string containing a hex color value looking like this: #rrggbb or like this: #RRGGBB")
@@ -60,22 +76,16 @@ impl<'de> serde::de::Visitor<'de> for RgbColorVisitor {
         let g = color([v[2], v[3]])?;
         let b = color([v[4], v[5]])?;
 
-        Ok(RgbColor(r, g, b))
+        Ok(SerdeColor(Color::Rgb(r, g, b)))
     }
 }
 
-impl<'de> serde::Deserialize<'de> for RgbColor {
+impl<'de> serde::Deserialize<'de> for SerdeColor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(RgbColorVisitor)
-    }
-}
-
-impl From<RgbColor> for tui::style::Color {
-    fn from(value: RgbColor) -> Self {
-        tui::style::Color::Rgb(value.0, value.1, value.2)
     }
 }
 
@@ -85,20 +95,20 @@ mod tests {
 
     #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
     struct Wrapper {
-        color: RgbColor,
+        color: SerdeColor,
     }
 
     #[test]
     fn color_de() {
         assert_eq!(
             Wrapper {
-                color: RgbColor(0xaa, 0xbb, 0xcc)
+                color: SerdeColor(tui::style::Color::Rgb(0xaa, 0xbb, 0xcc))
             },
             toml::from_str("color = \"#AABBCC\"").unwrap()
         );
         assert_eq!(
             Wrapper {
-                color: RgbColor(0xdd, 0xee, 0xff)
+                color: SerdeColor(tui::style::Color::Rgb(0xdd, 0xee, 0xff))
             },
             toml::from_str("color = \"#ddeeff\"").unwrap()
         );
@@ -107,7 +117,7 @@ mod tests {
     #[test]
     fn both_ways() {
         let val = Wrapper {
-            color: RgbColor(12, 240, 144),
+            color: SerdeColor(tui::style::Color::Rgb(12, 240, 144)),
         };
         assert_eq!(
             val,

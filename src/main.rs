@@ -18,14 +18,18 @@ fn main() -> AppResult<()> {
     }
 
     if cli.dump_sample_theme {
-        println!("{}", jwtop::config::sample_theme());
+        println!(
+            "{}",
+            toml::to_string_pretty(&jwtop::config::Theme::sample_theme()).unwrap()
+        );
+
         return Ok(());
     }
 
-    // TODO: load the config and actually use it in the app.
+    let config = jwtop::config::Config::load(&cli)?;
 
     // Create an application.
-    let mut app = App::new();
+    let mut app = App::new(config);
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());

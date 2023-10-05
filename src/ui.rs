@@ -16,7 +16,8 @@ pub mod processes;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    let style = Style::default().fg(Color::Cyan);
+    let block_style = Style::default().fg(*app.config.theme.widget.frame_color);
+    let title_style = Style::default().fg(*app.config.theme.widget.title_color);
     let block = Block::default()
         .borders(Borders::all())
         .border_type(BorderType::Rounded);
@@ -44,17 +45,18 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             &app.cpu_history,
             Box::new(|percentage, i| format!("cpu{i}: {percentage:.1}%")),
             [0.0, 100.0],
+            &app.config,
         )
-        .style(style)
-        .block(block.clone().title("cpu"))
+        .style(block_style)
+        .block(block.clone().title(Line::styled("cpu", title_style)))
         .label_suffix('%'),
         cpus[0],
     );
 
     frame.render_widget(
         CpusBars::new(app)
-            .style(style)
-            .block(block.clone().title("cpu")),
+            .style(block_style)
+            .block(block.clone().title(Line::styled("cpu", title_style))),
         cpus[1],
     );
 
@@ -63,22 +65,25 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             &[app.mem_history.clone()],
             Box::new(|used_mem, _| format!("used mem: {used_mem:.1}{}", app.mem_prefix.prefix())),
             [0.0, app.mem_total],
+            &app.config,
         )
-        .style(style)
-        .block(block.clone().title("mem"))
+        .style(block_style)
+        .block(block.clone().title(Line::styled("mem", title_style)))
         .label_suffix(app.mem_prefix.prefix()),
         mem_and_disks[0],
     );
 
     frame.render_widget(
         Disks::new(app)
-            .block(block.clone().title("disks"))
-            .style(style),
+            .block(block.clone().title(Line::styled("disks", title_style)))
+            .style(block_style),
         mem_and_disks[1],
     );
 
     frame.render_widget(
-        Processes::new(app).block(block.title("procs")).style(style),
+        Processes::new(app)
+            .block(block.title(Line::styled("procs", title_style)))
+            .style(block_style),
         layout[2],
     )
 }

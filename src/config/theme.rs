@@ -4,46 +4,88 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use tui::style::Color;
 
-use super::RgbColor;
-
-// TODO: actually, this is kind of stupid. Most of this can be handled by using serde attributes.
+use super::SerdeColor;
 
 mod default_colors {
-    use crate::config::RgbColor;
+    use crate::config::SerdeColor;
 
-    pub const RED: RgbColor = RgbColor(0xcc, 0x66, 0x66);
-    pub const GREEN: RgbColor = RgbColor(0xb5, 0xbd, 0x68);
+    pub fn red() -> SerdeColor {
+        SerdeColor(tui::style::Color::Red)
+    }
 
-    pub const YELLOW: RgbColor = RgbColor(0xf0, 0xc6, 0x74);
+    pub fn green() -> SerdeColor {
+        SerdeColor(tui::style::Color::Green)
+    }
 
-    pub const BLUE: RgbColor = RgbColor(0x81, 0xa2, 0xbe);
+    pub fn yellow() -> SerdeColor {
+        SerdeColor(tui::style::Color::Yellow)
+    }
 
-    pub const MAGENTA: RgbColor = RgbColor(0xb2, 0x94, 0xbb);
+    pub fn blue() -> SerdeColor {
+        SerdeColor(tui::style::Color::Blue)
+    }
 
-    pub const CYAN: RgbColor = RgbColor(0x8a, 0xbe, 0xb7);
+    pub fn _magenta() -> SerdeColor {
+        SerdeColor(tui::style::Color::Magenta)
+    }
 
-    pub const BG: RgbColor = RgbColor(0x1d, 0x1f, 0x21);
+    pub fn cyan() -> SerdeColor {
+        SerdeColor(tui::style::Color::Cyan)
+    }
+
+    pub fn plot() -> Vec<SerdeColor> {
+        vec![
+            SerdeColor(tui::style::Color::Blue),
+            SerdeColor(tui::style::Color::Cyan),
+            SerdeColor(tui::style::Color::Green),
+            SerdeColor(tui::style::Color::Magenta),
+            SerdeColor(tui::style::Color::Red),
+            SerdeColor(tui::style::Color::Yellow),
+        ]
+    }
+
+    pub const RED: SerdeColor = SerdeColor(tui::style::Color::Rgb(0xcc, 0x66, 0x66));
+    pub const GREEN: SerdeColor = SerdeColor(tui::style::Color::Rgb(0xb5, 0xbd, 0x68));
+    pub const YELLOW: SerdeColor = SerdeColor(tui::style::Color::Rgb(0xf0, 0xc6, 0x74));
+    pub const BLUE: SerdeColor = SerdeColor(tui::style::Color::Rgb(0x81, 0xa2, 0xbe));
+    pub const MAGENTA: SerdeColor = SerdeColor(tui::style::Color::Rgb(0xb2, 0x94, 0xbb));
+    pub const CYAN: SerdeColor = SerdeColor(tui::style::Color::Rgb(0x8a, 0xbe, 0xb7));
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
-pub struct RawTheme {
-    widget: Option<RawWidgetTheme>,
-    plot: Option<RawPlotTheme>,
-    bars: Option<RawBarsTheme>,
-    table: Option<RawTableTheme>,
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Theme {
+    #[serde(default)]
+    pub widget: WidgetTheme,
+
+    #[serde(default)]
+    pub plot: PlotTheme,
+
+    #[serde(default)]
+    pub bars: BarsTheme,
+
+    #[serde(default)]
+    pub table: TableTheme,
 }
 
-impl RawTheme {
-    fn sample_theme() -> Self {
+impl Theme {
+    pub fn load_from_file(path: &Path) -> Result<Self> {
+        let file = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read theme from {}", path.to_string_lossy()))?;
+
+        let theme: Theme = toml::from_str(&file).context("Failed to deserialize theme")?;
+
+        Ok(theme)
+    }
+
+    pub fn sample_theme() -> Self {
         Self {
-            widget: Some(RawWidgetTheme {
-                frame_color: Some(default_colors::CYAN),
-                title_color: Some(default_colors::CYAN),
-                background_color: Some(default_colors::BG),
-            }),
+            widget: WidgetTheme {
+                frame_color: default_colors::CYAN,
+                title_color: default_colors::CYAN,
+            },
 
-            plot: Some(RawPlotTheme {
-                axis_labels_color: Some(default_colors::CYAN),
+            plot: PlotTheme {
+                axis_labels_color: default_colors::CYAN,
                 plot_colors: vec![
                     default_colors::BLUE,
                     default_colors::CYAN,
@@ -52,204 +94,89 @@ impl RawTheme {
                     default_colors::RED,
                     default_colors::YELLOW,
                 ],
-            }),
+            },
 
-            bars: Some(RawBarsTheme {
-                low_usage_color: Some(default_colors::GREEN),
-                medium_usage_color: Some(default_colors::YELLOW),
-                high_usage_color: Some(default_colors::RED),
-            }),
+            bars: BarsTheme {
+                low_usage_color: default_colors::GREEN,
+                medium_usage_color: default_colors::YELLOW,
+                high_usage_color: default_colors::RED,
+            },
 
-            table: Some(RawTableTheme {
-                header_color: Some(default_colors::BLUE),
-                row_color: Some(default_colors::BLUE),
-            }),
-        }
-    }
-}
-
-pub fn sample_theme() -> String {
-    toml::to_string_pretty(&RawTheme::sample_theme()).unwrap()
-}
-
-fn tui_color(raw: Option<RgbColor>, default: Color) -> Color {
-    raw.map(|c| c.into()).unwrap_or(default)
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Theme {
-    pub widget: WidgetTheme,
-    pub plot: PlotTheme,
-    pub bars: BarsTheme,
-    pub table: TableTheme,
-}
-
-impl From<RawTheme> for Theme {
-    fn from(value: RawTheme) -> Self {
-        Self {
-            widget: value.widget.map(|t| t.into()).unwrap_or_default(),
-            plot: value.plot.map(|t| t.into()).unwrap_or_default(),
-            bars: value.bars.map(|t| t.into()).unwrap_or_default(),
-            table: value.table.map(|t| t.into()).unwrap_or_default(),
-        }
-    }
-}
-
-impl Theme {
-    pub fn load_from_file(path: &Path) -> Result<Self> {
-        let file = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read theme from {}", path.to_string_lossy()))?;
-
-        let raw: RawTheme = toml::from_str(&file).context("Failed to deserialize theme")?;
-
-        Ok(raw.into())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-struct RawWidgetTheme {
-    frame_color: Option<RgbColor>,
-    title_color: Option<RgbColor>,
-    background_color: Option<RgbColor>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct WidgetTheme {
-    pub frame_color: Color,
-    pub title_color: Color,
-}
-
-impl Default for WidgetTheme {
-    fn default() -> Self {
-        Self {
-            frame_color: Color::Cyan,
-            title_color: Color::Cyan,
-        }
-    }
-}
-
-impl From<RawWidgetTheme> for WidgetTheme {
-    fn from(value: RawWidgetTheme) -> Self {
-        let default = Self::default();
-
-        Self {
-            frame_color: tui_color(value.frame_color, default.frame_color),
-            title_color: tui_color(value.title_color, default.title_color),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-struct RawPlotTheme {
-    axis_labels_color: Option<RgbColor>,
-    plot_colors: Vec<RgbColor>,
-}
-
-#[derive(Debug, Clone)]
-pub struct PlotTheme {
-    pub axis_labels_color: Color,
-    pub plot_colors: Vec<Color>,
-}
-
-impl Default for PlotTheme {
-    fn default() -> Self {
-        Self {
-            axis_labels_color: Color::Cyan,
-            plot_colors: vec![
-                Color::Blue,
-                Color::Cyan,
-                Color::Green,
-                Color::Magenta,
-                Color::Red,
-                Color::Yellow,
-            ],
-        }
-    }
-}
-
-impl From<RawPlotTheme> for PlotTheme {
-    fn from(value: RawPlotTheme) -> Self {
-        let default = Self::default();
-
-        Self {
-            axis_labels_color: tui_color(value.axis_labels_color, default.axis_labels_color),
-            plot_colors: if !value.plot_colors.is_empty() {
-                value
-                    .plot_colors
-                    .into_iter()
-                    .map(|c| c.into())
-                    .collect::<Vec<_>>()
-            } else {
-                default.plot_colors
+            table: TableTheme {
+                header_color: default_colors::BLUE,
+                row_color: default_colors::BLUE,
             },
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-struct RawBarsTheme {
-    low_usage_color: Option<RgbColor>,
-    medium_usage_color: Option<RgbColor>,
-    high_usage_color: Option<RgbColor>,
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct WidgetTheme {
+    #[serde(default = "default_colors::cyan")]
+    pub frame_color: SerdeColor,
+    #[serde(default = "default_colors::cyan")]
+    pub title_color: SerdeColor,
 }
 
-#[derive(Debug, Clone, Copy)]
+impl Default for WidgetTheme {
+    fn default() -> Self {
+        Self {
+            frame_color: SerdeColor(Color::Cyan),
+            title_color: SerdeColor(Color::Cyan),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlotTheme {
+    #[serde(default = "default_colors::cyan")]
+    pub axis_labels_color: SerdeColor,
+    #[serde(default = "default_colors::plot")]
+    pub plot_colors: Vec<SerdeColor>,
+}
+
+impl Default for PlotTheme {
+    fn default() -> Self {
+        Self {
+            axis_labels_color: SerdeColor(Color::Cyan),
+            plot_colors: default_colors::plot(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BarsTheme {
-    pub low_usage_color: Color,
-    pub medium_usage_color: Color,
-    pub high_usage_color: Color,
+    #[serde(default = "default_colors::green")]
+    pub low_usage_color: SerdeColor,
+    #[serde(default = "default_colors::yellow")]
+    pub medium_usage_color: SerdeColor,
+    #[serde(default = "default_colors::red")]
+    pub high_usage_color: SerdeColor,
 }
 
 impl Default for BarsTheme {
     fn default() -> Self {
         Self {
-            low_usage_color: Color::Green,
-            medium_usage_color: Color::Yellow,
-            high_usage_color: Color::Red,
+            low_usage_color: SerdeColor(Color::Green),
+            medium_usage_color: SerdeColor(Color::Yellow),
+            high_usage_color: SerdeColor(Color::Red),
         }
     }
 }
 
-impl From<RawBarsTheme> for BarsTheme {
-    fn from(value: RawBarsTheme) -> Self {
-        let default = Self::default();
-
-        Self {
-            low_usage_color: tui_color(value.low_usage_color, default.low_usage_color),
-            medium_usage_color: tui_color(value.medium_usage_color, default.medium_usage_color),
-            high_usage_color: tui_color(value.high_usage_color, default.high_usage_color),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-struct RawTableTheme {
-    header_color: Option<RgbColor>,
-    row_color: Option<RgbColor>,
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TableTheme {
-    pub header_color: Color,
-    pub row_color: Color,
+    #[serde(default = "default_colors::blue")]
+    pub header_color: SerdeColor,
+    #[serde(default = "default_colors::blue")]
+    pub row_color: SerdeColor,
 }
 
 impl Default for TableTheme {
     fn default() -> Self {
         Self {
-            header_color: Color::Blue,
-            row_color: Color::Blue,
-        }
-    }
-}
-
-impl From<RawTableTheme> for TableTheme {
-    fn from(value: RawTableTheme) -> Self {
-        let default = Self::default();
-
-        Self {
-            header_color: tui_color(value.header_color, default.header_color),
-            row_color: tui_color(value.row_color, default.row_color),
+            header_color: SerdeColor(Color::Blue),
+            row_color: SerdeColor(Color::Blue),
         }
     }
 }
