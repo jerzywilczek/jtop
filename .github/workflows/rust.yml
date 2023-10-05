@@ -1,0 +1,40 @@
+name: lint and test
+on:
+    push:
+        branches: [main]
+    pull_request:
+        types: [opened, synchronize]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+    rust:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 🔧 Install the rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: 🔬 Install nextest
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-nextest
+
+            - name: 📥 Checkout repo
+              uses: actions/checkout@v3
+
+            - name: 📁 Rust cache
+              uses: Swatinem/rust-cache@v2
+
+            - name: 📖 Check formatting
+              run: cargo fmt --check
+
+            - name: 📎 Run clippy
+              run: cargo clippy --all-targets --all-features -- -D warnings
+
+            - name: 🧪 Run tests
+              run: cargo nextest run --no-fail-fast
+
+            - name: 📚 Run doctests
+              run: cargo test --doc
