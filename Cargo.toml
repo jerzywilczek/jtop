@@ -1,6 +1,6 @@
 [package]
 name = "jwtop"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Jerzy Wilczek <jerzykwilczek@gmail.com>"]
 license = "MIT"
 edition = "2021"
