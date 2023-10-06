@@ -23,6 +23,9 @@ pub struct Disks<'a, 'b> {
 
     #[cfg(target_os = "windows")]
     paragraph: Paragraph<'a>,
+
+    #[cfg(target_os = "windows")]
+    phantom: std::marker::PhantomData<&'b i32>,
 }
 
 impl<'a, 'b> Disks<'a, 'b> {
@@ -73,6 +76,8 @@ impl<'a, 'b> Disks<'a, 'b> {
         Self {
             paragraph: Paragraph::new("disks view not supported on windows ;(")
                 .alignment(Alignment::Center),
+
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -83,6 +88,9 @@ impl<'a, 'b> Disks<'a, 'b> {
 
             #[cfg(target_os = "windows")]
             paragraph: self.paragraph.style(style),
+
+            #[cfg(target_os = "windows")]
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -93,6 +101,9 @@ impl<'a, 'b> Disks<'a, 'b> {
 
             #[cfg(target_os = "windows")]
             paragraph: self.paragraph.block(block),
+
+            #[cfg(target_os = "windows")]
+            phantom: std::marker::PhantomData,
         }
     }
 }
