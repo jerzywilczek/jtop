@@ -106,7 +106,7 @@ pub enum MemPrefix {
 
 impl MemPrefix {
     pub const MULTIPLIER: u64 = 1024;
-    pub const PREFIXES: &[Self] = &[
+    pub const PREFIXES: &'static [Self] = &[
         MemPrefix::Byte,
         MemPrefix::Kilo,
         MemPrefix::Mega,

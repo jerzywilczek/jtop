@@ -38,7 +38,7 @@ pub enum Column {
 }
 
 impl Column {
-    pub const ALL_COLUMNS: &[Column] = &[
+    pub const ALL_COLUMNS: &'static [Column] = &[
         Column::Pid,
         Column::Name,
         Column::Cpu,
