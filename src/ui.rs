@@ -16,8 +16,12 @@ pub mod processes;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    let block_style = Style::default().fg(*app.config.theme.widget.frame_color);
-    let title_style = Style::default().fg(*app.config.theme.widget.title_color);
+    let mut block_style = Style::default().fg(*app.config.theme.widget.frame_color);
+    block_style.bg = app.config.theme.widget.background_color.map(|c| c.0);
+
+    let mut title_style = Style::default().fg(*app.config.theme.widget.title_color);
+    title_style.bg = app.config.theme.widget.background_color.map(|c| c.0);
+
     let block = Block::default()
         .borders(Borders::all())
         .border_type(BorderType::Rounded);

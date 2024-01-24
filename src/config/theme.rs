@@ -82,6 +82,7 @@ impl Theme {
             widget: WidgetTheme {
                 frame_color: default_colors::CYAN,
                 title_color: default_colors::CYAN,
+                background_color: Some(SerdeColor(tui::style::Color::Rgb(0x00, 0x2b, 0x36))),
             },
 
             plot: PlotTheme {
@@ -116,6 +117,8 @@ pub struct WidgetTheme {
     pub frame_color: SerdeColor,
     #[serde(default = "default_colors::cyan")]
     pub title_color: SerdeColor,
+    #[serde(default)]
+    pub background_color: Option<SerdeColor>,
 }
 
 impl Default for WidgetTheme {
@@ -123,6 +126,7 @@ impl Default for WidgetTheme {
         Self {
             frame_color: SerdeColor(Color::Cyan),
             title_color: SerdeColor(Color::Cyan),
+            background_color: None,
         }
     }
 }
